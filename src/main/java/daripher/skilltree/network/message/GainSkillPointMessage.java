@@ -4,20 +4,32 @@ import daripher.skilltree.capability.skill.IPlayerSkills;
 import daripher.skilltree.capability.skill.PlayerSkillsProvider;
 import daripher.skilltree.config.ServerConfig;
 import daripher.skilltree.exp.ExpHelper;
-import daripher.skilltree.network.NetworkDispatcher;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.Objects;
-import java.util.function.Supplier;
+public class GainSkillPointMessage implements CustomPacketPayload {
+    public static final Type<GainSkillPointMessage> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("skilltree", "gain_skill_point"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, GainSkillPointMessage> STREAM_CODEC = StreamCodec.of((buf, msg) -> {
+    }, buf -> new GainSkillPointMessage());
 
-public class GainSkillPointMessage {
-    public static void receive(Supplier<NetworkEvent.Context> ctxSupplier) {
-        Context ctx = ctxSupplier.get();
-        ctx.setPacketHandled(true);
-        ServerPlayer player = Objects.requireNonNull(ctx.getSender());
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+
+    public static void receive(GainSkillPointMessage message, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) {
+            return;
+        }
+        context.enqueueWork(() -> handlePacket(player));
+    }
+
+    private static void handlePacket(ServerPlayer player) {
         IPlayerSkills capability = PlayerSkillsProvider.get(player);
         int skills = capability.getPlayerSkills().size();
         int points = capability.getSkillPoints();
@@ -31,6 +43,6 @@ public class GainSkillPointMessage {
         }
         player.giveExperiencePoints(-cost);
         capability.grantSkillPoints(1);
-        NetworkDispatcher.network_channel.send(PacketDistributor.PLAYER.with(() -> player), new SyncPlayerSkillsMessage(player));
+        PacketDistributor.sendToPlayer(player, new SyncPlayerSkillsMessage(player));
     }
 }

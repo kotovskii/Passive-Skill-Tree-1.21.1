@@ -1,5 +1,7 @@
 package daripher.skilltree.skill.bonus.handler;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import daripher.skilltree.SkillTreeMod;
 import daripher.skilltree.mixin.MobEffectInstanceAccessor;
 import daripher.skilltree.skill.SkillBonusProvider;
@@ -10,13 +12,13 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraftforge.event.entity.living.MobEffectEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
+@EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
 public class EffectDurationBonusHandler {
     @SubscribeEvent
     public static void applyEffectDurationBonuses(MobEffectEvent.Added event) {
@@ -33,7 +35,7 @@ public class EffectDurationBonusHandler {
         }
         float durationMultiplier = 1f;
         MobEffectInstance effectInstance = event.getEffectInstance();
-        MobEffect mobEffect = effectInstance.getEffect();
+        MobEffect mobEffect = effectInstance.getEffect().value();
         // outgoing effects, inflicted by players
         if (playerEffectSource != null) {
             List<EffectDurationBonus> skillBonuses = SkillBonusProvider.getSkillBonuses(playerEffectSource, EffectDurationBonus.class);

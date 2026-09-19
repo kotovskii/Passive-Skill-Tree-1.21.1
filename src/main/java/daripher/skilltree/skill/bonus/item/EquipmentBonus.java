@@ -132,7 +132,7 @@ public final class EquipmentBonus implements ItemBonus<EquipmentBonus> {
             CompoundTag skillBonusTag = tag.getCompound("skill_bonus");
             String type = skillBonusTag.getString("type");
             ResourceLocation serializerId = ResourceLocation.parse(type);
-            SkillBonus.Serializer serializer = PSTRegistries.SKILL_BONUSES.get().getValue(serializerId);
+            SkillBonus.Serializer serializer = PSTRegistries.SKILL_BONUSES.get().get(serializerId);
             Objects.requireNonNull(serializer, "Unknown skill bonus: " + serializerId);
             SkillBonus<?> skillBonus = serializer.deserialize(skillBonusTag);
             return new EquipmentBonus(skillBonus);
@@ -169,7 +169,7 @@ public final class EquipmentBonus implements ItemBonus<EquipmentBonus> {
 
         @Override
         public ItemBonus<?> createDefaultInstance() {
-            return new EquipmentBonus(new OutgoingDamageBonus(0.1f, AttributeModifier.Operation.MULTIPLY_BASE));
+            return new EquipmentBonus(new OutgoingDamageBonus(0.1f, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         }
     }
 }

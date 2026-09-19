@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -42,7 +43,7 @@ public final class CurioSlotsBonus implements SkillBonus<CurioSlotsBonus> {
         if (firstTime) {
             CuriosApi.getCuriosInventory(player).ifPresent(inv -> {
                 HashMultimap<String, AttributeModifier> modifiers = HashMultimap.create();
-                AttributeModifier modifier = new AttributeModifier(modifierId, "SkillBonus", amount, AttributeModifier.Operation.ADDITION);
+                AttributeModifier modifier = new AttributeModifier(getModifierId(), amount, AttributeModifier.Operation.ADD_VALUE);
                 modifiers.put(slotName, modifier);
                 inv.addPermanentSlotModifiers(modifiers);
             });
@@ -53,7 +54,7 @@ public final class CurioSlotsBonus implements SkillBonus<CurioSlotsBonus> {
     public void onSkillRemoved(ServerPlayer player) {
         CuriosApi.getCuriosInventory(player).ifPresent(inv -> {
             HashMultimap<String, AttributeModifier> modifiers = HashMultimap.create();
-            AttributeModifier modifier = new AttributeModifier(modifierId, "SkillBonus", amount, AttributeModifier.Operation.ADDITION);
+            AttributeModifier modifier = new AttributeModifier(getModifierId(), amount, AttributeModifier.Operation.ADD_VALUE);
             modifiers.put(slotName, modifier);
             inv.removeSlotModifiers(modifiers);
         });
@@ -92,7 +93,7 @@ public final class CurioSlotsBonus implements SkillBonus<CurioSlotsBonus> {
         } else {
             slotDescription = TooltipHelper.getSlotTooltip(slotName);
         }
-        MutableComponent tooltip = TooltipHelper.getSkillBonusTooltip(slotDescription, amount, AttributeModifier.Operation.ADDITION);
+        MutableComponent tooltip = TooltipHelper.getSkillBonusTooltip(slotDescription, amount, AttributeModifier.Operation.ADD_VALUE);
         return tooltip.withStyle(TooltipHelper.getSkillBonusStyle(isPositive()));
     }
 
@@ -128,6 +129,10 @@ public final class CurioSlotsBonus implements SkillBonus<CurioSlotsBonus> {
 
     public void setAmount(int amount) {
         this.amount = amount;
+    }
+
+    private ResourceLocation getModifierId() {
+        return SerializationHelper.deserializeModifierId(modifierId.toString());
     }
 
     public static class Serializer implements SkillBonus.Serializer {

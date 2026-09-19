@@ -7,11 +7,13 @@ import daripher.skilltree.config.ClientConfig;
 import daripher.skilltree.config.ServerConfig;
 import daripher.skilltree.init.*;
 import daripher.skilltree.init.predicate.*;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,14 +22,14 @@ public class SkillTreeMod {
     public static final String MOD_ID = "skilltree";
     public static final Logger LOGGER = LogManager.getLogger(SkillTreeMod.MOD_ID);
 
-    public SkillTreeMod(FMLJavaModLoadingContext context) {
-        registerModRegistries(context);
-        registerConfigs(context);
+    public SkillTreeMod(IEventBus eventBus, ModContainer modContainer) {
+        registerModRegistries(eventBus);
+        registerConfigs(modContainer);
         registerCompatibilities();
     }
 
-    private static void registerModRegistries(FMLJavaModLoadingContext context) {
-        IEventBus eventBus = context.getModEventBus();
+    private static void registerModRegistries(IEventBus eventBus) {
+        PSTRegistries.bootstrap();
         PSTItems.REGISTRY.register(eventBus);
         PSTMobEffects.REGISTRY.register(eventBus);
         PSTCreativeTabs.REGISTRY.register(eventBus);
@@ -48,15 +50,16 @@ public class SkillTreeMod {
         PSTItemBonuses.REGISTRY.register(eventBus);
         PSTRecipeTypes.REGISTRY.register(eventBus);
         PSTMobEffectPredicates.REGISTRY.register(eventBus);
+        daripher.skilltree.capability.skill.PlayerSkillsProvider.REGISTRY.register(eventBus);
     }
 
-    private static void registerConfigs(FMLJavaModLoadingContext context) {
-        context.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
-        context.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+    private static void registerConfigs(ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
     }
 
     private static void registerCompatibilities() {
-        if (ModList.get().isLoaded("attributeslib")) {
+        if (FMLEnvironment.dist == Dist.CLIENT && ModList.get().isLoaded("apothic_attributes")) {
             AttributesLibCompatibility.INSTANCE.register();
         }
         if (ModList.get().isLoaded("curios")) {

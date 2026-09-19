@@ -12,7 +12,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,12 +28,12 @@ public class EffectAmountFunction implements FloatFunction<EffectAmountFunction>
 
     @Override
     public float apply(LivingEntity entity) {
-        List<MobEffect> effects = entity.getActiveEffects().stream().map(MobEffectInstance::getEffect).toList();
+        List<MobEffectCategory> effects = entity.getActiveEffects().stream().map(effect -> effect.getEffect().value().getCategory()).toList();
         return switch (effectType) {
             case ANY -> effects.size();
-            case NEUTRAL -> effects.stream().filter(e -> e.getCategory() == MobEffectCategory.NEUTRAL).count();
-            case HARMFUL -> effects.stream().filter(e -> e.getCategory() == MobEffectCategory.HARMFUL).count();
-            case BENEFICIAL -> effects.stream().filter(e -> e.getCategory() == MobEffectCategory.BENEFICIAL).count();
+            case NEUTRAL -> effects.stream().filter(e -> e == MobEffectCategory.NEUTRAL).count();
+            case HARMFUL -> effects.stream().filter(e -> e == MobEffectCategory.HARMFUL).count();
+            case BENEFICIAL -> effects.stream().filter(e -> e == MobEffectCategory.BENEFICIAL).count();
         };
     }
 

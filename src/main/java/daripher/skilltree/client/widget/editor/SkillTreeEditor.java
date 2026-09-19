@@ -41,7 +41,7 @@ import net.minecraft.stats.StatType;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -77,13 +77,13 @@ public class SkillTreeEditor extends WidgetGroup<AbstractWidget> {
     }
 
     @Override
-    public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    protected void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         skillMirrorer.render(graphics, mouseX, mouseY, partialTick);
         skillDragger.render(graphics, mouseX, mouseY, partialTick);
         if (height > 0) {
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0xDD000000);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.renderWidget(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
@@ -178,12 +178,12 @@ public class SkillTreeEditor extends WidgetGroup<AbstractWidget> {
     }
 
     private Collection<StatRequirement> getDefaultRequirementInstances() {
-        return ForgeRegistries.STAT_TYPES.getValues().stream().map(SkillTreeEditor::createDefaultRequirement).filter(Objects::nonNull)
+        return BuiltInRegistries.STAT_TYPE.stream().toList().stream().map(SkillTreeEditor::createDefaultRequirement).filter(Objects::nonNull)
                 .toList();
     }
 
     private static @Nullable <T> StatRequirement createDefaultRequirement(StatType<T> statType) {
-        ResourceLocation statId = ForgeRegistries.STAT_TYPES.getKey(statType);
+        ResourceLocation statId = BuiltInRegistries.STAT_TYPE.getKey(statType);
         Registry<T> statRegistry = statType.getRegistry();
         T stat = statRegistry.byId(0);
         if (stat == null) {
@@ -237,7 +237,7 @@ public class SkillTreeEditor extends WidgetGroup<AbstractWidget> {
     }
 
     public SelectionMenuButton<MobEffect> addSelectionMenu(int x, int y, int width, MobEffect defaultValue) {
-        Collection<MobEffect> values = ForgeRegistries.MOB_EFFECTS.getValues();
+        Collection<MobEffect> values = BuiltInRegistries.MOB_EFFECT.stream().toList();
         return addSelectionMenu(x, y, width, values).setValue(defaultValue)
                 .setElementNameGetter(e -> Component.literal(e.getDescriptionId()));
     }

@@ -3,6 +3,7 @@ package daripher.skilltree.mixin.minecraft;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import daripher.skilltree.entity.EquipmentContainer;
 import daripher.skilltree.skill.bonus.handler.JumpHeightBonusHandler;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,8 +32,8 @@ public abstract class LivingEntityMixin implements EquipmentContainer {
     }
 
     @SuppressWarnings("unused")
-    @Inject(method = "dropAllDeathLoot", at = @At("HEAD"))
-    private void storeEquipmentBeforeDeath(DamageSource damageSource, CallbackInfo callbackInfo) {
+    @Inject(method = "dropAllDeathLoot(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;)V", at = @At("HEAD"), remap = false)
+    private void storeEquipmentBeforeDeath(ServerLevel level, DamageSource damageSource, CallbackInfo callbackInfo) {
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack itemInSlot = getItemBySlot(slot);
             if (itemInSlot.isEmpty()) {

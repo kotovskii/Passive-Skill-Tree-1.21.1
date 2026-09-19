@@ -1,5 +1,7 @@
 package daripher.skilltree.skill.bonus.handler;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import daripher.skilltree.SkillTreeMod;
 import daripher.skilltree.skill.SkillBonusProvider;
 import daripher.skilltree.skill.bonus.player.IncomingDamageBonus;
@@ -7,17 +9,16 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
+@EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
 public class IncomingDamageBonusHandler {
     @SubscribeEvent
-    public static void modifyIncomingDamage(LivingHurtEvent event) {
+    public static void modifyIncomingDamage(LivingDamageEvent.Pre event) {
         DamageSource damageSource = event.getSource();
         LivingEntity attacker = getAttacker(damageSource);
         if (!(event.getEntity() instanceof Player player)) {
@@ -31,15 +32,15 @@ public class IncomingDamageBonusHandler {
         float baseDamageMultiplier = 1f;
         float totalDamageMultiplier = 1f;
         for (IncomingDamageBonus bonus : skillBonuses) {
-            flatDamageBonus += bonus.getDamageModifier(AttributeModifier.Operation.ADDITION, damageSource, player, attacker);
-            baseDamageMultiplier += bonus.getDamageModifier(AttributeModifier.Operation.MULTIPLY_BASE, damageSource, player, attacker);
-            totalDamageMultiplier *= 1f + bonus.getDamageModifier(AttributeModifier.Operation.MULTIPLY_TOTAL, damageSource, player, attacker);
+            flatDamageBonus += bonus.getDamageModifier(AttributeModifier.Operation.ADD_VALUE, damageSource, player, attacker);
+            baseDamageMultiplier += bonus.getDamageModifier(AttributeModifier.Operation.ADD_MULTIPLIED_BASE, damageSource, player, attacker);
+            totalDamageMultiplier *= 1f + bonus.getDamageModifier(AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, damageSource, player, attacker);
         }
-        float amount = event.getAmount();
+        float amount = event.getNewDamage();
         amount += flatDamageBonus;
         amount *= baseDamageMultiplier;
         amount *= totalDamageMultiplier;
-        event.setAmount(amount);
+        event.setNewDamage(amount);
     }
 
     private static @Nullable LivingEntity getAttacker(DamageSource damageSource) {

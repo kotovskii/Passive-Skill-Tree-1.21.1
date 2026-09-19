@@ -21,7 +21,7 @@ public class SkillRequirementSerializer implements JsonSerializer<SkillRequireme
             type = jsonObj.get("type").getAsString();
         }
         ResourceLocation serializerId = ResourceLocation.parse(type);
-        SkillRequirement.Serializer serializer = PSTRegistries.SKILL_REQUIREMENTS.get().getValue(serializerId);
+        SkillRequirement.Serializer serializer = PSTRegistries.SKILL_REQUIREMENTS.get().get(serializerId);
         Objects.requireNonNull(serializer, "Unknown skill requirement: " + serializerId);
         return serializer.deserialize(jsonObj);
     }

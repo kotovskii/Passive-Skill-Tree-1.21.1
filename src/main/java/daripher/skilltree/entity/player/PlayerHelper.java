@@ -1,12 +1,10 @@
 package daripher.skilltree.entity.player;
 
 import com.google.common.collect.Streams;
-import daripher.skilltree.compat.curios.CuriosCompatibility;
 import daripher.skilltree.skill.bonus.predicate.item.EquipmentPredicate;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -42,9 +40,6 @@ public class PlayerHelper {
     }
 
     public static Stream<ItemStack> getCurios(LivingEntity living) {
-        if (ModList.get().isLoaded("curios")) {
-            return CuriosCompatibility.INSTANCE.getCurios(living);
-        }
         return Stream.of();
     }
 }

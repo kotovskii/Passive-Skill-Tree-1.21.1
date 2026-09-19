@@ -14,8 +14,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.Tags;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -66,15 +66,15 @@ public class EquipmentPredicate implements ItemStackPredicate {
     }
 
     public static boolean isLeggings(ItemStack stack) {
-        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.LEGS || stack.is(Tags.Items.ARMORS_LEGGINGS);
+        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.LEGS;
     }
 
     public static boolean isTrident(ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (Objects.requireNonNull(id).toString().equals("tetra:modular_single")) {
             return true;
         }
-        return stack.getItem() instanceof TridentItem || stack.is(Tags.Items.TOOLS_TRIDENTS);
+        return stack.getItem() instanceof TridentItem || stack.is(Tags.Items.TOOLS_SPEAR);
     }
 
     public static boolean isPickaxe(ItemStack stack) {
@@ -82,11 +82,11 @@ public class EquipmentPredicate implements ItemStackPredicate {
     }
 
     public static boolean isCrossbow(ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (Objects.requireNonNull(id).toString().equals("tetra:modular_crossbow")) {
             return true;
         }
-        return stack.getItem() instanceof CrossbowItem || stack.is(Tags.Items.TOOLS_CROSSBOWS);
+        return stack.getItem() instanceof CrossbowItem || stack.is(Tags.Items.TOOLS_CROSSBOW);
     }
 
     public static boolean isWeapon(ItemStack stack) {
@@ -98,7 +98,7 @@ public class EquipmentPredicate implements ItemStackPredicate {
     }
 
     public static boolean isChestplate(ItemStack stack) {
-        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.CHEST || stack.is(Tags.Items.ARMORS_CHESTPLATES);
+        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.CHEST;
     }
 
     public static boolean isShovel(ItemStack stack) {
@@ -106,19 +106,19 @@ public class EquipmentPredicate implements ItemStackPredicate {
     }
 
     public static boolean isShield(ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (Objects.requireNonNull(id).toString().equals("tetra:modular_shield")) {
             return true;
         }
-        return stack.getItem() instanceof ShieldItem || stack.is(Tags.Items.TOOLS_SHIELDS);
+        return stack.getItem() instanceof ShieldItem || stack.is(Tags.Items.TOOLS_SHIELD);
     }
 
     public static boolean isHelmet(ItemStack stack) {
-        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.HEAD || stack.is(Tags.Items.ARMORS_HELMETS);
+        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.HEAD;
     }
 
     public static boolean isSword(ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (Objects.requireNonNull(id).toString().equals("tetra:modular_sword")) {
             return true;
         }
@@ -134,15 +134,15 @@ public class EquipmentPredicate implements ItemStackPredicate {
     }
 
     public static boolean isBow(ItemStack stack) {
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (Objects.requireNonNull(id).toString().equals("tetra:modular_bow")) {
             return true;
         }
-        return stack.getItem() instanceof BowItem || stack.is(Tags.Items.TOOLS_BOWS);
+        return stack.getItem() instanceof BowItem || stack.is(Tags.Items.TOOLS_BOW);
     }
 
     public static boolean isBoots(ItemStack stack) {
-        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.FEET || stack.is(Tags.Items.ARMORS_BOOTS);
+        return stack.getItem() instanceof ArmorItem armor && armor.getEquipmentSlot() == EquipmentSlot.FEET;
     }
 
     public static boolean isAxe(ItemStack stack) {

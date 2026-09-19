@@ -1,5 +1,6 @@
 package daripher.skilltree.network.message;
 
+import daripher.skilltree.SkillTreeMod;
 import daripher.skilltree.capability.skill.IPlayerSkills;
 import daripher.skilltree.capability.skill.PlayerSkillsProvider;
 import daripher.skilltree.client.screen.SkillTreeScreen;
@@ -7,19 +8,22 @@ import daripher.skilltree.data.reloader.SkillsReloader;
 import daripher.skilltree.skill.PassiveSkill;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 
-public class SyncPlayerSkillsMessage {
+public class SyncPlayerSkillsMessage implements CustomPacketPayload {
+    public static final Type<SyncPlayerSkillsMessage> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("skilltree", "sync_player_skills"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncPlayerSkillsMessage> STREAM_CODEC = StreamCodec.of((buf, msg) -> msg.encode(buf), SyncPlayerSkillsMessage::decode);
     private List<ResourceLocation> learnedSkills = new ArrayList<>();
     private int skillPoints;
 
@@ -42,22 +46,29 @@ public class SyncPlayerSkillsMessage {
         return result;
     }
 
-    public static void receive(SyncPlayerSkillsMessage message, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.setPacketHandled(true);
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> handlePacket(message, ctx)));
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+
+    public static void receive(SyncPlayerSkillsMessage message, IPayloadContext context) {
+        context.enqueueWork(() -> handlePacket(message));
     }
 
     @OnlyIn(value = Dist.CLIENT)
-    private static void handlePacket(SyncPlayerSkillsMessage message, NetworkEvent.Context ctx) {
-        ctx.setPacketHandled(true);
+    private static void handlePacket(SyncPlayerSkillsMessage message) {
         Minecraft minecraft = Minecraft.getInstance();
         assert minecraft.player != null;
         IPlayerSkills capability = PlayerSkillsProvider.get(minecraft.player);
         capability.getPlayerSkills().clear();
-        message.learnedSkills.stream().map(SkillsReloader::getSkillById).filter(Objects::nonNull)
-                .forEach(capability.getPlayerSkills()::add);
+        List<PassiveSkill> resolvedSkills = message.learnedSkills.stream().map(SkillsReloader::getSkillById).filter(Objects::nonNull).toList();
+        resolvedSkills.forEach(capability.getPlayerSkills()::add);
         capability.setSkillPoints(message.skillPoints);
+        if (resolvedSkills.size() != message.learnedSkills.size()) {
+            SkillTreeMod.LOGGER.warn("Received player skill data before all skills were available: resolved {} of {} learned skills",
+                    resolvedSkills.size(), message.learnedSkills.size());
+        }
+        SkillTreeMod.LOGGER.info("Received player skill data: {} learned skills, {} skill points", resolvedSkills.size(), message.skillPoints);
         if (minecraft.screen instanceof SkillTreeScreen screen) {
             screen.updateSkillPoints(capability.getSkillPoints());
             screen.init();

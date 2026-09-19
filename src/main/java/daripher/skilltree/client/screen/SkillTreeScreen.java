@@ -12,7 +12,6 @@ import daripher.skilltree.skill.PassiveSkillTree;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.achievement.StatsUpdateListener;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
@@ -26,7 +25,7 @@ import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class SkillTreeScreen extends Screen implements StatsUpdateListener {
+public class SkillTreeScreen extends Screen {
     public static final int BACKGROUND_SIZE = 2048;
     private final PassiveSkillTree skillTree;
     private final SkillButtons skillButtons;
@@ -94,7 +93,7 @@ public class SkillTreeScreen extends Screen implements StatsUpdateListener {
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderAnimation += partialTick;
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         skillButtons.render(graphics, mouseX, mouseY, partialTick);
         renderOverlay(graphics);
         skillTreeWidgets.render(graphics, mouseX, mouseY, partialTick);
@@ -152,7 +151,7 @@ public class SkillTreeScreen extends Screen implements StatsUpdateListener {
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics) {
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         ResourceLocation texture = ResourceLocation.parse("skilltree:textures/screen/skill_tree_background.png");
         PoseStack poseStack = graphics.pose();
         poseStack.pushPose();
@@ -174,8 +173,8 @@ public class SkillTreeScreen extends Screen implements StatsUpdateListener {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
-        return skillButtons.mouseScrolled(mouseX, mouseY, amount);
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return skillButtons.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private @Nonnull LocalPlayer getLocalPlayer() {
@@ -186,7 +185,6 @@ public class SkillTreeScreen extends Screen implements StatsUpdateListener {
         skillTreeWidgets.updateSkillPoints(skillPoints);
     }
 
-    @Override
     public void onStatsUpdated() {
         statsUpdated = true;
         init();

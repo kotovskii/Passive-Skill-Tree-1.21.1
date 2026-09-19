@@ -17,8 +17,9 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraftforge.common.data.LanguageProvider;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.data.LanguageProvider;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.util.Objects;
 
@@ -47,6 +48,38 @@ public abstract class PSTTranslationProvider extends LanguageProvider {
         addSkill(skillTree, skillId1, name);
         addSkill(skillTree, skillId2, name);
         addSkill(skillTree, skillId3, name);
+    }
+
+    protected void add(DeferredHolder<?, ?> holder, String value) {
+        add(getCustomRegistryTranslationKey(holder, null), value);
+    }
+
+    protected void add(DeferredHolder<?, ?> holder, String type, String value) {
+        add(getCustomRegistryTranslationKey(holder, type), value);
+    }
+
+    private static String getCustomRegistryTranslationKey(DeferredHolder<?, ?> holder, String type) {
+        String prefix = switch (holder.getKey().registry().toString()) {
+            case "skilltree:living_conditions" -> "living_condition";
+            case "skilltree:mob_effect_predicates" -> "mob_effect_predicate";
+            case "skilltree:skill_requirements" -> "skill_requirements";
+            case "skilltree:event_listeners" -> "event_listener";
+            case "skilltree:damage_conditions" -> "damage_condition";
+            case "skilltree:living_multipliers" -> "skill_bonus_multiplier";
+            case "skilltree:float_functions" -> "value_provider";
+            case "skilltree:skill_bonuses" -> "skill_bonus";
+            case "skilltree:item_conditions" -> "item_condition";
+            case "skilltree:enchantment_conditions" -> "enchantment_condition";
+            case "skilltree:mob_effect_conditions" -> "mob_effect_predicate";
+            case "skilltree:skill_bonus_multipliers" -> "skill_bonus_multiplier";
+            case "skilltree:numeric_value_providers" -> "value_provider";
+            case "skilltree:item_bonuses" -> "item_bonus";
+            default -> throw new IllegalArgumentException("Unsupported translation registry: " + holder.getKey().registry());
+        };
+        ResourceLocation id = holder.getId();
+        return type == null
+                ? "%s.%s.%s".formatted(prefix, id.getNamespace(), id.getPath())
+                : "%s.%s.%s.%s".formatted(prefix, id.getNamespace(), id.getPath(), type);
     }
 
     protected void add(LivingEntityPredicate.Serializer condition, String value) {
@@ -175,13 +208,13 @@ public abstract class PSTTranslationProvider extends LanguageProvider {
         add(key, value);
     }
 
-    protected void add(TagKey<Item> itemTag, String value) {
+    protected void addItemTag(TagKey<Item> itemTag, String value) {
         ResourceLocation id = itemTag.location();
         String key = "item_tag.%s".formatted(id.toString());
         add(key, value);
     }
 
-    protected void add(TagKey<Item> itemTag, String type, String value) {
+    protected void addItemTag(TagKey<Item> itemTag, String type, String value) {
         ResourceLocation id = itemTag.location();
         String key = "item_tag.%s.%s".formatted(id.toString(), type);
         add(key, value);
@@ -199,13 +232,13 @@ public abstract class PSTTranslationProvider extends LanguageProvider {
     }
 
     protected void add(RecipeSerializer<?> recipeSerializer, String translation) {
-        ResourceLocation id = ForgeRegistries.RECIPE_SERIALIZERS.getKey(recipeSerializer);
+        ResourceLocation id = BuiltInRegistries.RECIPE_SERIALIZER.getKey(recipeSerializer);
         Objects.requireNonNull(id);
         add("recipe.%s.%s".formatted(id.getNamespace(), id.getPath()), translation);
     }
 
     protected void add(RecipeSerializer<?> recipeSerializer, String type, String translation) {
-        ResourceLocation id = ForgeRegistries.RECIPE_SERIALIZERS.getKey(recipeSerializer);
+        ResourceLocation id = BuiltInRegistries.RECIPE_SERIALIZER.getKey(recipeSerializer);
         Objects.requireNonNull(id);
         add("recipe.%s.%s.%s".formatted(id.getNamespace(), id.getPath(), type), translation);
     }

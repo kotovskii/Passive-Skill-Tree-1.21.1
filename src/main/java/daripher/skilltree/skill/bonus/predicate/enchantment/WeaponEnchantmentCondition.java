@@ -5,8 +5,6 @@ import com.google.gson.JsonParseException;
 import daripher.skilltree.init.predicate.PSTEnchantmentPredicates;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.item.enchantment.EnchantmentCategory;
-
 import java.util.Objects;
 
 public class WeaponEnchantmentCondition implements EnchantmentCondition {

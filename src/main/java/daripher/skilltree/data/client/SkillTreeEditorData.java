@@ -8,12 +8,13 @@ import daripher.skilltree.data.reloader.SkillsReloader;
 import daripher.skilltree.skill.PassiveSkill;
 import daripher.skilltree.skill.PassiveSkillTree;
 import net.minecraft.ChatFormatting;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.fml.loading.FMLPaths;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -22,6 +23,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -41,11 +43,19 @@ public class SkillTreeEditorData {
         try {
             createSkillTreesSaveFolders(treeId);
             File mcmetaFile = new File(getEditorFolder(), "pack.mcmeta");
-            if (!mcmetaFile.exists()) {
-                generatePackMcmetaFile(mcmetaFile);
-            }
-            if (!getSkillTreeSaveFile(treeId).exists()) {
-                PassiveSkillTree skillTree = SkillTreesReloader.getSkillTreeById(treeId);
+            generatePackMcmetaFile(mcmetaFile);
+            File skillTreeFile = getSkillTreeSaveFile(treeId);
+            PassiveSkillTree syncedSkillTree = SkillTreesReloader.getSkillTrees().get(treeId);
+            if (!skillTreeFile.exists()) {
+                if (syncedSkillTree == null && SkillTreesReloader.getSkillTrees().isEmpty()) {
+                    sendChatMessage("Server skill tree data has not been received yet", ChatFormatting.DARK_RED);
+                    sendChatMessage("Try opening the editor again after joining the world", ChatFormatting.RED);
+                    return null;
+                }
+                PassiveSkillTree skillTree = syncedSkillTree;
+                if (skillTree == null) {
+                    skillTree = new PassiveSkillTree(treeId);
+                }
                 saveEditorSkillTree(skillTree);
             }
             if (!EDITOR_TREES.containsKey(treeId)) {
@@ -55,6 +65,12 @@ public class SkillTreeEditorData {
                 EDITOR_TREES_IDS.add(treeId);
             }
             PassiveSkillTree skillTree = EDITOR_TREES.getOrDefault(treeId, new PassiveSkillTree(treeId));
+            if (isEmptyPlaceholder(skillTree, syncedSkillTree)) {
+                backupEmptyPlaceholder(skillTreeFile);
+                saveEditorSkillTree(syncedSkillTree);
+                loadEditorSkillTree(treeId);
+                skillTree = EDITOR_TREES.getOrDefault(treeId, syncedSkillTree);
+            }
             for (ResourceLocation skillId : skillTree.getSkillIds()) {
                 try {
                     loadOrCreateEditorSkill(skillId);
@@ -84,6 +100,21 @@ public class SkillTreeEditorData {
         }
     }
 
+    private static boolean isEmptyPlaceholder(PassiveSkillTree editorTree, @Nullable PassiveSkillTree syncedTree) {
+        return syncedTree != null && editorTree.getSkillIds().isEmpty() && !syncedTree.getSkillIds().isEmpty();
+    }
+
+    private static void backupEmptyPlaceholder(File file) {
+        try {
+            File backupFile = new File(file.getParentFile(), file.getName() + ".empty_backup");
+            if (!backupFile.exists()) {
+                Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+            }
+        } catch (IOException exception) {
+            SkillTreeMod.LOGGER.warn("Failed to back up empty editor skill tree placeholder: {}", file, exception);
+        }
+    }
+
     private static void createSkillTreesSaveFolders(ResourceLocation treeId) {
         File folder = getSkillTreeSavesFolder(treeId);
         try {
@@ -101,10 +132,10 @@ public class SkillTreeEditorData {
                     "description": {
                       "text": "PST editor data"
                     },
-                    "pack_format": 15
+                    "pack_format": %s
                   }
                 }
-                """;
+                """.formatted(SharedConstants.DATA_PACK_FORMAT);
         try {
             Files.writeString(file.toPath(), fileContents);
         } catch (IOException exception) {

@@ -1,12 +1,19 @@
 package daripher.skilltree.recipe.workbench;
 
 import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.MapCodec;
 import daripher.skilltree.event.PoisonedWeaponEvents;
 import daripher.skilltree.init.PSTRecipeSerializers;
 import daripher.skilltree.inventory.menu.WorkbenchContainer;
 import daripher.skilltree.skill.bonus.predicate.item.EquipmentPredicate;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectCategory;
@@ -15,10 +22,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,7 +44,7 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
     }
 
     @Override
-    public @NotNull ItemStack assemble(@NotNull WorkbenchContainer container, @NotNull RegistryAccess registryAccess) {
+    public @NotNull ItemStack assemble(@NotNull WorkbenchContainer container, @NotNull HolderLookup.Provider registries) {
         return getResult(container);
     }
 
@@ -52,8 +59,9 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
     }
 
     private boolean isValidPoison(ItemStack itemStack) {
-        Stream<MobEffectInstance> effectsStream = PotionUtils.getMobEffects(itemStack).stream();
-        return effectsStream.anyMatch(mobEffectInstance -> mobEffectInstance.getEffect().getCategory() == MobEffectCategory.HARMFUL);
+        PotionContents potionContents = itemStack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        Stream<MobEffectInstance> effectsStream = java.util.stream.StreamSupport.stream(potionContents.getAllEffects().spliterator(), false);
+        return effectsStream.anyMatch(mobEffectInstance -> mobEffectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL);
     }
 
     @Override
@@ -62,7 +70,7 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
     }
 
     private Ingredient getMeleeWeaponIngredient() {
-        Collection<Item> items = ForgeRegistries.ITEMS.getValues();
+        Collection<Item> items = BuiltInRegistries.ITEM.stream().toList();
         Stream<ItemStack> meleeWeapons = items.stream().map(ItemStack::new).filter(EquipmentPredicate::isMeleeWeapon);
         return Ingredient.of(meleeWeapons.toList().toArray(new ItemStack[0]));
     }
@@ -74,7 +82,7 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
 
     private Ingredient getPoisonIngredient() {
         Item baseItem = Items.POTION;
-        Collection<Potion> availablePotions = ForgeRegistries.POTIONS.getValues();
+        Collection<Potion> availablePotions = BuiltInRegistries.POTION.stream().toList();
         Stream<Potion> harmfulPotions = availablePotions.stream().filter(WorkbenchWeaponPoisoningRecipe::isHarmfulPotion);
         Stream<ItemStack> suitablePotionStacks = harmfulPotions.map(potion -> getPotionStack(baseItem, potion));
         return Ingredient.of(suitablePotionStacks.toList().toArray(new ItemStack[0]));
@@ -83,7 +91,7 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
     private static boolean isHarmfulPotion(Potion potion) {
         List<MobEffectInstance> effects = potion.getEffects();
         for (MobEffectInstance mobEffectInstance : effects) {
-            if (mobEffectInstance.getEffect().getCategory() == MobEffectCategory.HARMFUL) {
+            if (mobEffectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
                 return true;
             }
         }
@@ -92,7 +100,7 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
 
     private static @NotNull ItemStack getPotionStack(Item baseItem, Potion potion) {
         ItemStack itemStack = new ItemStack(baseItem);
-        PotionUtils.setPotion(itemStack, potion);
+        itemStack.set(DataComponents.POTION_CONTENTS, new PotionContents(BuiltInRegistries.POTION.wrapAsHolder(potion)));
         return itemStack;
     }
 
@@ -121,21 +129,36 @@ public class WorkbenchWeaponPoisoningRecipe extends AbstractWorkbenchRecipe {
     }
 
     public static class Serializer implements RecipeSerializer<WorkbenchWeaponPoisoningRecipe> {
+        private static final ResourceLocation UNKNOWN_ID = ResourceLocation.fromNamespaceAndPath("skilltree", "unknown_workbench_weapon_poisoning");
+        private final MapCodec<WorkbenchWeaponPoisoningRecipe> codec = MapCodec.assumeMapUnsafe(Codec.PASSTHROUGH.xmap(
+                dynamic -> fromJson(UNKNOWN_ID, dynamic.convert(JsonOps.INSTANCE).getValue().getAsJsonObject()),
+                recipe -> new Dynamic<>(JsonOps.INSTANCE, new JsonObject())));
+        private final StreamCodec<RegistryFriendlyByteBuf, WorkbenchWeaponPoisoningRecipe> streamCodec = StreamCodec.of(
+                this::toNetwork,
+                buf -> fromNetwork(UNKNOWN_ID, buf));
+
         @Override
+        public MapCodec<WorkbenchWeaponPoisoningRecipe> codec() {
+            return codec;
+        }
+
+        @Override
+        public StreamCodec<RegistryFriendlyByteBuf, WorkbenchWeaponPoisoningRecipe> streamCodec() {
+            return streamCodec;
+        }
+
         public @NotNull WorkbenchWeaponPoisoningRecipe fromJson(@NotNull ResourceLocation id, @NotNull JsonObject jsonObject) {
             boolean requiresPassiveSkill = jsonObject.get("requires_passive_skill").getAsBoolean();
             int maxUses = jsonObject.get("max_uses").getAsInt();
             return new WorkbenchWeaponPoisoningRecipe(id, requiresPassiveSkill, maxUses);
         }
 
-        @Override
         public @Nullable WorkbenchWeaponPoisoningRecipe fromNetwork(@NotNull ResourceLocation id, @NotNull FriendlyByteBuf buf) {
             boolean requiresPassiveSkill = buf.readBoolean();
             int maxUses = buf.readInt();
             return new WorkbenchWeaponPoisoningRecipe(id, requiresPassiveSkill, maxUses);
         }
 
-        @Override
         public void toNetwork(@NotNull FriendlyByteBuf buf, @NotNull WorkbenchWeaponPoisoningRecipe recipe) {
             buf.writeBoolean(recipe.hasPassiveSkillRequirement());
             buf.writeInt(recipe.maxUses);

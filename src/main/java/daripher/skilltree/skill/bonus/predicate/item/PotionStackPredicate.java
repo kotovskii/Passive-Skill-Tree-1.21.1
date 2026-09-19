@@ -14,7 +14,8 @@ import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.core.component.DataComponents;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -41,8 +42,10 @@ public final class PotionStackPredicate implements ItemStackPredicate {
     }
 
     public static boolean hasEffects(ItemStack stack, MobEffectCategory category) {
-        return PotionUtils.getAllEffects(stack.getOrCreateTag()).stream().map(MobEffectInstance::getEffect)
-                .anyMatch(effect -> effect.getCategory() == category);
+        PotionContents potionContents = stack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+        return java.util.stream.StreamSupport.stream(potionContents.getAllEffects().spliterator(), false)
+                .map(MobEffectInstance::getEffect)
+                .anyMatch(effect -> effect.value().getCategory() == category);
     }
 
     @Override

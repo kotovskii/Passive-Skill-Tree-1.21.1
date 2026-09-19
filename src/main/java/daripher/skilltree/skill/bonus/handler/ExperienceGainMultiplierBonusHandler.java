@@ -1,20 +1,22 @@
 package daripher.skilltree.skill.bonus.handler;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import daripher.skilltree.SkillTreeMod;
 import daripher.skilltree.skill.SkillBonusProvider;
 import daripher.skilltree.skill.bonus.player.ExperienceGainMultiplierBonus;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
-import net.minecraftforge.event.entity.player.ItemFishedEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.Tags;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
+import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
+@EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
 public class ExperienceGainMultiplierBonusHandler {
     @SubscribeEvent
     public static void applyMobExpBonus(LivingExperienceDropEvent event) {
@@ -32,9 +34,9 @@ public class ExperienceGainMultiplierBonusHandler {
         if (!event.getState().is(Tags.Blocks.ORES)) {
             return;
         }
-        float multiplier = 1f;
-        multiplier += getExperienceMultiplierBonus(event.getPlayer(), ExperienceGainMultiplierBonus.ExperienceSource.ORE);
-        event.setExpToDrop((int) (event.getExpToDrop() * multiplier));
+        // NeoForge 1.21.1 no longer exposes mutable block XP on BreakEvent.
+        // Reintroduce this through a loot/XP hook during the gameplay pass.
+        getExperienceMultiplierBonus(event.getPlayer(), ExperienceGainMultiplierBonus.ExperienceSource.ORE);
     }
 
     @SubscribeEvent

@@ -1,5 +1,7 @@
 package daripher.skilltree.skill.bonus.handler;
 
+import net.neoforged.fml.common.EventBusSubscriber;
+
 import daripher.skilltree.SkillTreeMod;
 import daripher.skilltree.skill.SkillBonusProvider;
 import daripher.skilltree.skill.bonus.player.CritDamageBonus;
@@ -9,14 +11,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.CriticalHitEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.CriticalHitEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 
-@Mod.EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
+@EventBusSubscriber(modid = SkillTreeMod.MOD_ID)
 public class CriticalHitDamageBonusHandler {
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void applyCritBonuses(CriticalHitEvent event) {
@@ -27,17 +27,17 @@ public class CriticalHitDamageBonusHandler {
         if (!(event.getTarget() instanceof LivingEntity hurtEntity)) {
             return;
         }
-        boolean isCrit = event.isVanillaCritical() || event.getResult() == Event.Result.ALLOW;
+        boolean isCrit = event.isCriticalHit();
         if (!isCrit) {
             return;
         }
         DamageSource damageSource = player.level().damageSources().playerAttack(player);
         float modCritMultiplier = getCritDamageModifier(player, damageSource, hurtEntity);
-        event.setDamageModifier(1.5f + modCritMultiplier);
+        event.setDamageMultiplier(1.5f + modCritMultiplier);
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)
-    public static void applyIndirectHitCritDamage(LivingHurtEvent event) {
+    public static void applyIndirectHitCritDamage(LivingDamageEvent.Pre event) {
         DamageSource damageSource = event.getSource();
         Entity directDamagingEntity = damageSource.getDirectEntity();
         // direct damage, handled by the method above, ignoring
@@ -60,10 +60,10 @@ public class CriticalHitDamageBonusHandler {
         LivingEntity hurtEntity = event.getEntity();
         float modCritMultiplier = getCritDamageModifier(player, damageSource, hurtEntity);
         if (isVanillaCrit) {
-            event.setAmount(event.getAmount() * (1f + modCritMultiplier));
+            event.setNewDamage(event.getNewDamage() * (1f + modCritMultiplier));
         } else {
             float vanillaCritMultiplier = 1.5f;
-            event.setAmount(event.getAmount() * (vanillaCritMultiplier + modCritMultiplier));
+            event.setNewDamage(event.getNewDamage() * (vanillaCritMultiplier + modCritMultiplier));
         }
     }
 

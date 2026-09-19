@@ -18,6 +18,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.RandomSource;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -53,14 +55,14 @@ public final class InflictMobEffectBonus implements EventListenerBonus<InflictMo
             return;
         }
         MobEffectInstance effectInstanceCopy = new MobEffectInstance(effectInstance);
-        MobEffect effect = effectInstance.getEffect();
+        Holder<MobEffect> effect = effectInstance.getEffect();
         if (maxStacks > 1) {
             effectInstanceCopy = getEffectInstanceAfterStacking(target, effect, effectInstanceCopy);
         }
         target.addEffect(effectInstanceCopy, source);
     }
 
-    private MobEffectInstance getEffectInstanceAfterStacking(LivingEntity target, MobEffect effect, MobEffectInstance effectInstance) {
+    private MobEffectInstance getEffectInstanceAfterStacking(LivingEntity target, Holder<MobEffect> effect, MobEffectInstance effectInstance) {
         MobEffectInstance activeEffectInstance = target.getEffect(effect);
         if (activeEffectInstance == null) {
             return effectInstance;
@@ -147,7 +149,7 @@ public final class InflictMobEffectBonus implements EventListenerBonus<InflictMo
             tooltip = Component.translatable(bonusDescription, effectDescription, "");
         }
         if (chance < 1) {
-            tooltip = TooltipHelper.getSkillBonusTooltip(tooltip, chance, AttributeModifier.Operation.MULTIPLY_BASE);
+            tooltip = TooltipHelper.getSkillBonusTooltip(tooltip, chance, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
         }
         tooltip = eventListener.getTooltip(tooltip);
         if (maxStacks > 1) {
@@ -171,7 +173,7 @@ public final class InflictMobEffectBonus implements EventListenerBonus<InflictMo
 
     @Override
     public boolean isPositive() {
-        return chance > 0 ^ eventListener.getTarget() == Target.PLAYER ^ effectInstance.getEffect()
+        return chance > 0 ^ eventListener.getTarget() == Target.PLAYER ^ effectInstance.getEffect().value()
                 .getCategory() != MobEffectCategory.HARMFUL;
     }
 
@@ -185,7 +187,7 @@ public final class InflictMobEffectBonus implements EventListenerBonus<InflictMo
         editor.addLabel(0, 0, "Effect", ChatFormatting.GOLD);
         editor.addLabel(150, 0, "Chance", ChatFormatting.GOLD);
         editor.increaseHeight(19);
-        editor.addSelectionMenu(0, 0, 145, effectInstance.getEffect()).setResponder(effect -> selectEffect(consumer, effect));
+        editor.addSelectionMenu(0, 0, 145, effectInstance.getEffect().value()).setResponder(effect -> selectEffect(consumer, effect));
         editor.addNumericTextField(150, 0, 50, 14, chance).setNumericResponder(value -> selectChance(consumer, value));
         editor.increaseHeight(19);
         editor.addLabel(0, 0, "Duration", ChatFormatting.GOLD);
@@ -250,7 +252,7 @@ public final class InflictMobEffectBonus implements EventListenerBonus<InflictMo
     }
 
     public void setEffectInstance(MobEffect effectInstance) {
-        this.effectInstance = new MobEffectInstance(effectInstance, this.effectInstance.getDuration(), this.effectInstance.getAmplifier());
+        this.effectInstance = new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effectInstance), this.effectInstance.getDuration(), this.effectInstance.getAmplifier());
     }
 
     public void setDuration(int duration) {

@@ -3,6 +3,11 @@ package daripher.skilltree.recipe.workbench;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.MapCodec;
 import daripher.skilltree.client.tooltip.TooltipHelper;
 import daripher.skilltree.data.serializers.SerializationHelper;
 import daripher.skilltree.init.PSTRecipeSerializers;
@@ -11,8 +16,10 @@ import daripher.skilltree.network.NetworkHelper;
 import daripher.skilltree.skill.bonus.item.ItemBonus;
 import daripher.skilltree.skill.bonus.item.ItemBonusHandler;
 import daripher.skilltree.skill.bonus.predicate.item.ItemStackPredicate;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -43,7 +50,7 @@ public class WorkbenchUpgradeBonusRecipe extends AbstractWorkbenchRecipe {
     }
 
     @Override
-    public @NotNull ItemStack assemble(@NotNull WorkbenchContainer container, @NotNull RegistryAccess registryAccess) {
+    public @NotNull ItemStack assemble(@NotNull WorkbenchContainer container, @NotNull HolderLookup.Provider registries) {
         return getResult(container);
     }
 
@@ -113,7 +120,24 @@ public class WorkbenchUpgradeBonusRecipe extends AbstractWorkbenchRecipe {
     }
 
     public static class Serializer implements RecipeSerializer<WorkbenchUpgradeBonusRecipe> {
+        private static final ResourceLocation UNKNOWN_ID = ResourceLocation.fromNamespaceAndPath("skilltree", "unknown_workbench_item_bonus");
+        private final MapCodec<WorkbenchUpgradeBonusRecipe> codec = MapCodec.assumeMapUnsafe(Codec.PASSTHROUGH.xmap(
+                dynamic -> fromJson(UNKNOWN_ID, dynamic.convert(JsonOps.INSTANCE).getValue().getAsJsonObject()),
+                recipe -> new Dynamic<>(JsonOps.INSTANCE, new JsonObject())));
+        private final StreamCodec<RegistryFriendlyByteBuf, WorkbenchUpgradeBonusRecipe> streamCodec = StreamCodec.of(
+                this::toNetwork,
+                buf -> fromNetwork(UNKNOWN_ID, buf));
+
         @Override
+        public MapCodec<WorkbenchUpgradeBonusRecipe> codec() {
+            return codec;
+        }
+
+        @Override
+        public StreamCodec<RegistryFriendlyByteBuf, WorkbenchUpgradeBonusRecipe> streamCodec() {
+            return streamCodec;
+        }
+
         public @NotNull WorkbenchUpgradeBonusRecipe fromJson(@NotNull ResourceLocation id, @NotNull JsonObject jsonObject) {
             ItemStackPredicate baseItemStackPredicate = SerializationHelper.deserializeItemPredicate(jsonObject, "base_item_condition");
             ItemBonus<?> itemBonus = SerializationHelper.deserializeItemBonus(jsonObject);
@@ -121,14 +145,13 @@ public class WorkbenchUpgradeBonusRecipe extends AbstractWorkbenchRecipe {
             Map<Ingredient, Integer> additionalIngredients = new HashMap<>();
             JsonArray ingredientsJson = jsonObject.getAsJsonArray("additionalIngredients");
             for (JsonElement jsonElement : ingredientsJson) {
-                Ingredient ingredient = Ingredient.fromJson(jsonElement.getAsJsonObject().get("ingredient"));
+                Ingredient ingredient = Ingredient.CODEC_NONEMPTY.parse(JsonOps.INSTANCE, jsonElement.getAsJsonObject().get("ingredient")).getOrThrow(JsonParseException::new);
                 int requiredAmount = jsonElement.getAsJsonObject().get("required_amount").getAsInt();
                 additionalIngredients.put(ingredient, requiredAmount);
             }
             return new WorkbenchUpgradeBonusRecipe(id, baseItemStackPredicate, additionalIngredients, requiresPassiveSkill, itemBonus);
         }
 
-        @Override
         public @Nullable WorkbenchUpgradeBonusRecipe fromNetwork(@NotNull ResourceLocation id, @NotNull FriendlyByteBuf buf) {
             ItemStackPredicate baseItemStackPredicate = NetworkHelper.readItemPredicate(buf);
             ItemBonus<?> itemBonus = NetworkHelper.readItemBonus(buf);
@@ -136,12 +159,11 @@ public class WorkbenchUpgradeBonusRecipe extends AbstractWorkbenchRecipe {
             Map<Ingredient, Integer> additionalIngredients = new HashMap<>();
             int ingredientsCount = buf.readInt();
             for (int i = 0; i < ingredientsCount; i++) {
-                additionalIngredients.put(Ingredient.fromNetwork(buf), buf.readInt());
+                additionalIngredients.put(Ingredient.CONTENTS_STREAM_CODEC.decode((RegistryFriendlyByteBuf) buf), buf.readInt());
             }
             return new WorkbenchUpgradeBonusRecipe(id, baseItemStackPredicate, additionalIngredients, requiresPassiveSkill, itemBonus);
         }
 
-        @Override
         public void toNetwork(@NotNull FriendlyByteBuf buf, @NotNull WorkbenchUpgradeBonusRecipe recipe) {
             NetworkHelper.writeItemPredicate(buf, recipe.baseItemStackPredicate);
             NetworkHelper.writeItemBonus(buf, recipe.itemBonus);
@@ -149,7 +171,7 @@ public class WorkbenchUpgradeBonusRecipe extends AbstractWorkbenchRecipe {
             int ingredientsCount = recipe.getAdditionalIngredients().size();
             buf.writeInt(ingredientsCount);
             recipe.getAdditionalIngredients().forEach((ingredient, requiredAmount) -> {
-                ingredient.toNetwork(buf);
+                Ingredient.CONTENTS_STREAM_CODEC.encode((RegistryFriendlyByteBuf) buf, ingredient);
                 buf.writeInt(requiredAmount);
             });
         }
